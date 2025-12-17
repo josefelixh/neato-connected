@@ -496,9 +496,14 @@ uart:
             }
           } else if (command.find("ARCHES Board") != std::string::npos) id(uiState).publish_state("Starting...");
 
-          //else {
-            //  id(uiState).publish_state(command.c_str());
-          //}
+          // ---- DEBUG: Log unknown commands ----
+          else {
+            ESP_LOGW("uart_parser", "Unknown/unhandled command: %s", command.c_str());
+            ESP_LOGD("uart_parser", "Full response lines (%zu):", lines.size());
+            for (size_t i = 0; i < lines.size() && i < 10; i++) {
+              ESP_LOGD("uart_parser", "  [%zu]: %s", i, lines[i].c_str());
+            }
+          }
 
 
 sensor:
@@ -703,6 +708,17 @@ text_sensor:
   - platform: template
     name: "Language"
     id: language
+    entity_category: "diagnostic"
+
+
+text:
+  # --- DEBUG: Command Input ---
+  - platform: template
+    name: "DEBUG: Command Input"
+    id: debug_command
+    optimistic: true
+    initial_value: "GetHelp"
+    mode: text
     entity_category: "diagnostic"
 
 
@@ -974,4 +990,43 @@ button:
 
   - platform: restart
     name: Reboot ESP
-    
+
+  # --- DEBUG: Command Discovery ---
+  - platform: template
+    name: "DEBUG: Send Command"
+    icon: mdi:console
+    on_press:
+      - uart.write: !lambda |-
+          std::string cmd = id(debug_command).state;
+          if (cmd.empty()) {
+            ESP_LOGW("debug", "No command entered in debug_command text field");
+            return {};
+          }
+
+          // Add newline if not present
+          if (cmd.back() != '\n') cmd += "\n";
+
+          ESP_LOGI("debug", "Sending command: %s", cmd.c_str());
+          return std::vector<uint8_t>(cmd.begin(), cmd.end());
+    entity_category: "diagnostic"
+
+  - platform: template
+    name: "DEBUG: Quick Test (help, GetHelp, GetSchedule, GetLDSScan)"
+    icon: mdi:test-tube
+    on_press:
+      - uart.write: "help \n"
+      - delay: 500ms
+      - uart.write: "GetHelp \n"
+      - delay: 500ms
+      - uart.write: "GetSchedule \n"
+      - delay: 500ms
+      - uart.write: "GetLDSScan \n"
+      - delay: 500ms
+      - uart.write: "GetButtons \n"
+      - delay: 500ms
+      - uart.write: "GetMotors \n"
+      - delay: 500ms
+      - uart.write: "GetAnalogSensors \n"
+      - delay: 500ms
+      - uart.write: "GetDigitalSensors \n"
+    entity_category: "diagnostic"
