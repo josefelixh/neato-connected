@@ -1,0 +1,9 @@
+# Log files
+logs/
+
+# ESPHome secrets
+secrets.yaml
+
+# IDE
+.vscode/
+.idea/
