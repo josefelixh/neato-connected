@@ -15,10 +15,13 @@ esphome:
   friendly_name: neato-esp
 #   Combatability between esphome config and this card is ensured as long as the
 #   major version's match, for relase candicates, betas etc (indicated by X.X-a/b/rc.X), the version
-#   has to match perfectly otherwise compatability is not promised. 
+#   has to match perfectly otherwise compatability is not promised.
 #
 #   Please try to keep the versions the same, and check the github for updates!
-  project: 
+#
+#   NOTE: This configuration includes parser improvements for firmware 4.6.0 compatibility.
+#   Tested with BotVac D7 Connected running firmware 4.6.0 (build 72).
+  project:
     name: philip2809.neato-connected
     version: "1.1.1"
 
@@ -358,6 +361,14 @@ uart:
               trim(key);
               trim(value);
 
+              // In firmware 4.6.0, some values have additional comma-separated fields
+              // Extract only the first field before any additional commas
+              size_t second_comma = value.find(',');
+              if (second_comma != std::string::npos) {
+                value = value.substr(0, second_comma);
+                trim(value);
+              }
+
                    if (key == "MainBoard Serial Number") id(mainBoardSerial).publish_state(value.c_str());
               else if (key == "MainBoard Version") id(mainBoardVersion).publish_state(value.c_str());
               else if (key == "Serial Number") id(robotSerial).publish_state(value.c_str());
@@ -382,6 +393,9 @@ uart:
 
               std::string ui_line = states_line.substr(0, sep);
               std::string robot_line = states_line.substr(sep + 1);
+
+              // Ensure robot_line is trimmed before processing (firmware 4.6.0 compatibility)
+              trim(robot_line);
 
               static const char* prefix_ui = "Current UI State is: ";
               static const char* prefix_robot = "Current Robot State is: ";
