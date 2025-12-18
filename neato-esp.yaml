@@ -19,8 +19,9 @@ esphome:
 #
 #   Please try to keep the versions the same, and check the github for updates!
 #
-#   NOTE: This configuration includes parser improvements for firmware 4.6.0 compatibility.
-#   Tested with BotVac D7 Connected running firmware 4.6.0 (build 72).
+#   NOTE: This configuration is adapted for ESP32-C3 hardware and includes:
+#   - Syslog integration for remote logging
+#   - Debug tools for command testing
   project:
     name: philip2809.neato-connected
     version: "1.1.1"
@@ -186,8 +187,33 @@ wifi:
     password: "dPtii3cEQaPR"
 
 captive_portal:
+
+# Required for syslog - specify syslog server here
+udp:
+  id: udp_component
+  addresses: 192.168.9.245
+
 logger:
   baud_rate: 0
+  level: DEBUG
+  logs:
+    # Fine-tune log levels per component
+    uart_parser: DEBUG      # Your parsing logic
+    uart: INFO             # Raw UART data
+    sensor: INFO            # Sensor updates
+    binary_sensor: INFO
+    text_sensor: INFO
+    switch: INFO
+    button: INFO
+    script: INFO
+    api: WARN               # Only warnings from API
+    ota: INFO
+
+# Add syslog
+syslog:
+  udp_id: udp_component
+  port: 514
+  strip: true
 
 uart:
   id: uart_bus
@@ -361,14 +387,6 @@ uart:
               trim(key);
               trim(value);
 
-              // In firmware 4.6.0, some values have additional comma-separated fields
-              // Extract only the first field before any additional commas
-              size_t second_comma = value.find(',');
-              if (second_comma != std::string::npos) {
-                value = value.substr(0, second_comma);
-                trim(value);
-              }
-
                    if (key == "MainBoard Serial Number") id(mainBoardSerial).publish_state(value.c_str());
               else if (key == "MainBoard Version") id(mainBoardVersion).publish_state(value.c_str());
               else if (key == "Serial Number") id(robotSerial).publish_state(value.c_str());
@@ -393,9 +411,6 @@ uart:
 
               std::string ui_line = states_line.substr(0, sep);
               std::string robot_line = states_line.substr(sep + 1);
-
-              // Ensure robot_line is trimmed before processing (firmware 4.6.0 compatibility)
-              trim(robot_line);
 
               static const char* prefix_ui = "Current UI State is: ";
               static const char* prefix_robot = "Current Robot State is: ";

@@ -3,6 +3,10 @@ logs/
 
 # ESPHome secrets
 secrets.yaml
+secrets.yaml.example
+
+# ESPHome build cache
+.esphome/
 
 # IDE
 .vscode/
