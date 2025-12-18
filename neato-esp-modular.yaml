@@ -26,9 +26,9 @@ packages:
 
   # OPTIONAL FEATURES: Uncomment to enable
   # Captive portal - uncomment to enable WiFi fallback AP for easy setup
-  captive_portal: !include
-    file: features/captive-portal.yaml
-    optional: true
+  # captive_portal: !include
+  #   file: features/captive-portal.yaml
+  #   optional: true
 
   # Syslog - uncomment to enable remote logging
   syslog: !include
@@ -36,9 +36,14 @@ packages:
     optional: true
 
   # Debug tools - uncomment to enable command testing features
-  debug: !include
-    file: features/debug-tools.yaml
-    optional: true
+  # debug: !include
+  #   file: features/debug-tools.yaml
+  #   optional: true
+
+  # Web server - uncomment to enable web interface
+  # web_server: !include
+  #   file: features/web-server.yaml
+  #   optional: true
 
 ############################################
 # ESPHome Core Configuration
