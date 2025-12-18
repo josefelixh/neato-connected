@@ -105,4 +105,12 @@ dist
 
 # TernJS port file
 .tern-port
+# ESPHome secrets
+secrets.yaml
 
+# ESPHome build cache
+.esphome/
+
+# IDE
+.vscode/
+.idea/
