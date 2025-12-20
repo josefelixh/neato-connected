@@ -270,6 +270,7 @@ api:
 
 # Logger configuration (will be overridden if syslog feature is enabled)
 logger:
+  baud_rate: 0
   level: INFO
   logs:
     uart_parser: WARN
