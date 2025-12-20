@@ -2,7 +2,7 @@
 # ESPHome CLI helper script
 # Supports both Docker and native ESPHome installations
 
-DOCKER_IMAGE="esphome/esphome"
+DOCKER_IMAGE="esphome/esphome:latest"
 CONFIG_FILE="neato-esp-modular.yaml"
 
 # Detect whether to use Docker or native ESPHome
@@ -29,6 +29,24 @@ elif [ "$USE_NATIVE" = false ]; then
   echo "  - Docker: https://www.docker.com/get-started" >&2
   echo "  - Native ESPHome: pip3 install esphome" >&2
   exit 1
+fi
+
+# Detect DNS servers for Docker (needed for mDNS resolution on Mac)
+DNS_FLAGS=""
+if [ "$USE_DOCKER" = true ]; then
+  # Get DNS servers from the system (macOS only)
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS - extract DNS servers from scutil
+    DNS_SERVERS=$(scutil --dns | grep 'nameserver\[[0-9]*\]' | awk '{print $3}' | sort -u | head -n 2)
+    for dns in $DNS_SERVERS; do
+      DNS_FLAGS="$DNS_FLAGS --dns=$dns"
+    done
+    # Fallback to public DNS if no DNS servers found (macOS only)
+    if [ -z "$DNS_FLAGS" ]; then
+      DNS_FLAGS="--dns=8.8.8.8 --dns=1.1.1.1"
+    fi
+  fi
+  # On Linux, --network=host uses host DNS automatically, no flags needed
 fi
 
 # Function to detect USB serial port
@@ -111,7 +129,7 @@ case "$1" in
   upload)
     echo "Uploading to $CONFIG_FILE (OTA)..."
     if [ "$USE_DOCKER" = true ]; then
-      docker run --rm --network=host -v "${PWD}":/config -it $DOCKER_IMAGE upload /config/$CONFIG_FILE
+      docker run --rm --network=host $DNS_FLAGS -v "${PWD}":/config -it $DOCKER_IMAGE upload /config/$CONFIG_FILE
     else
       esphome upload $CONFIG_FILE
     fi
@@ -120,7 +138,7 @@ case "$1" in
   run)
     echo "Compiling and uploading $CONFIG_FILE (OTA)..."
     if [ "$USE_DOCKER" = true ]; then
-      docker run --rm --network=host -v "${PWD}":/config -it $DOCKER_IMAGE run /config/$CONFIG_FILE
+      docker run --rm --network=host $DNS_FLAGS -v "${PWD}":/config -it $DOCKER_IMAGE run /config/$CONFIG_FILE
     else
       esphome run $CONFIG_FILE
     fi
@@ -169,7 +187,7 @@ case "$1" in
   logs)
     echo "Showing logs for $CONFIG_FILE (network)..."
     if [ "$USE_DOCKER" = true ]; then
-      docker run --rm --network=host -v "${PWD}":/config -it $DOCKER_IMAGE logs /config/$CONFIG_FILE
+      docker run --rm --network=host $DNS_FLAGS -v "${PWD}":/config -it $DOCKER_IMAGE logs /config/$CONFIG_FILE
     else
       esphome logs $CONFIG_FILE
     fi
