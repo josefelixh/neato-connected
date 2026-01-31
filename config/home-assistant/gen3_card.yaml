@@ -197,7 +197,7 @@ cards:
                             action: toggle
                         - type: custom:button-card
                           entity: button.neato_vacuum_manual_drive_turn_right_down
-                          name: Arc Right
+                          name: Right
                           press_action:
                             action: call-service
                             service: button.press
