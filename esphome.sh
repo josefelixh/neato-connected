@@ -1,6 +1,10 @@
 #!/bin/bash
 # ESPHome CLI helper script
 # Supports both Docker and native ESPHome installations
+#
+# macOS note: Docker Desktop requires "Local Network" permission to reach LAN devices.
+# If connections fail, check: System Settings > Privacy & Security > Local Network
+# and ensure Docker is enabled. Toggle off/on if needed.
 
 DOCKER_IMAGE="esphome/esphome:latest"
 CONFIG_FILE="neato-esp-modular.yaml"
@@ -17,11 +21,19 @@ fi
 
 if command -v esphome &> /dev/null; then
   USE_NATIVE=true
+  NATIVE_SOURCE="native"
+elif [ -x "${PWD}/.venv/bin/esphome" ]; then
+  USE_NATIVE=true
+  NATIVE_SOURCE="venv"
+  source "${PWD}/.venv/bin/activate"
 fi
 
 # Prefer Docker if both are available, otherwise use native
 if [ "$USE_DOCKER" = true ]; then
   USE_NATIVE=false
+  echo "Using Docker: $DOCKER_IMAGE"
+elif [ "$USE_NATIVE" = true ]; then
+  echo "Using $NATIVE_SOURCE ESPHome: $(esphome version 2>/dev/null || echo 'unknown')"
 elif [ "$USE_NATIVE" = false ]; then
   echo "Error: Neither Docker nor native ESPHome found." >&2
   echo "" >&2
