@@ -93,7 +93,7 @@ The pictures here are from a D5 but should be similar for others. Please read th
 
 
 ## Bending pins (not recommended)
-You could, instead of using an JST-XH connector bind the debug pins to allow for dupont connectors to connect.
+You could, instead of using an JST-XH connector bend the debug pins to allow for dupont connectors to connect.
 
 ![bent-pins-dupont](./pics/installs/tom/bend-pins.png)
 

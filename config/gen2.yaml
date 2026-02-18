@@ -18,6 +18,8 @@ substitutions:
   infointerval: 2sec
   chargerinterval: 2min
 
+  reboot_timeout: 15min # if you have Home Assistant but not always connected, put this to "0s" to disable it, the esp will only reboot if the api connection is lost, after the time specified here
+
   # ---- Version and robot type ----
   version: "1.2-b.7" # THIS IS A BETA VERSION!
   type: "gen2"
@@ -109,6 +111,8 @@ esphome:
 api:
   encryption:
     key: !secret neato_vacuum_api
+
+  reboot_timeout: ${reboot_timeout}
 
   actions:
     - action: send_cmd

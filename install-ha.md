@@ -1,6 +1,6 @@
 # Install with Home Assistant
 
-My initiall, and recommened, way to use this repair. All versions of this repair will be supported via this route, later versions should be much easier since I plan on making it all as one package on HACS. (ESPHome will probably still be required)
+My initial, and recommened, way to use this repair. All versions of this repair will be supported via this route, later versions should be much easier since I plan on making it all as one package on HACS. (ESPHome will probably still be required)
 
 # TODO: add images
 
@@ -59,14 +59,17 @@ Once you have filled this file with your values, save it, and make sure to never
 If you want to add more devices, best practice is to set the api key and ota password in your secrets file. Your wifi password and ssid should also be kept here. Since the esp device will be strapped to, or inside the robot OTA (over the air) updates is quite important for this use case.
 
 ### Config file
-Once back at the ESPHome main page, click the big green button in the bottom left to add a new device. Read the information, but for now, click "Continue" and either import the [`neato_vacuum.yaml`](https://github.com/philip2809/neato-connected/releases/latest/download/neato_vacuum.yaml) file, or start with an empty configuration.
-# todo: links based on your robot gen
+Download the ESPHome config based on the generation of your robot:
+- [`gen2`](https://github.com/philip2809/neato-connected/releases/latest/download/esphome_gen2.yaml)
+- [`gen3`](https://github.com/philip2809/neato-connected/releases/latest/download/esphome_gen3.yaml)
+
+Once back at the ESPHome main page, click the big green button in the bottom left to add a new device. Read the information, but for now, click "Continue" and either import the file you downloaded, or start with an empty configuration and paste the contents in. Open the file in edit mode in case it does not automatically open in edit mode.
 
 **The following two steps might be hard to do, feel free to ask for help in the discord or discussions.**
 
-Now, since you may be using a different board then I am, and this might get complicated. You will need to find out what platform to set. Here is the list of [available platforms](https://esphome.io/components/#supported-microcontrollers). 
+Now, you will need to fill out some of the details in the configuration file, but the main parts is the platform type, pins for uart, name and ip settings if needed. If you are not using home assistant you will also need to configure the timezone platform. There is some additional help as comments in the configuration file.
 
-Next, you will need to figure out which pins to use, once again this is highly dependent on your board, both based on which ones you can easily connect too, but also what is supported on your platform. In some cases, the pins labeled `TX` and `RX` cannot be used, as these are used to upload the firmware, you will need to find GPIO pins that support using using UART, on the ESP32 many of the GPIO pins can be used. There is many tutorials for the different boards, here is some common ones:
+For this uart pins, this is highly dependent on your board, both based on which ones you can easily connect too, but also what is supported on your platform. In some cases, the pins labeled `TX` and `RX` cannot be used, as these are used to upload the firmware, you will need to find GPIO pins that support using using UART, on the ESP32 many of the GPIO pins can be used. There is many tutorials for the different boards, here is some common ones:
 - [ESP32](https://randomnerdtutorials.com/esp32-pinout-reference-gpios/)
 - [ESP8266](https://randomnerdtutorials.com/esp8266-pinout-reference-gpios/)
 
@@ -87,7 +90,7 @@ If neither of these link work, please check that the device actually connected t
 
 ## Step 4
 When you have navigated to the site of the ESP device it should look something like this:
-# todo: add image
+![Webserver disconnected](pics/setup/step_4-webserver-disconnected.png)
 
 This is the webserver of the device. It will show up as not connected since we are not connected to the robot, we are only connected to a power source so that the ESP device can be configured. Now you can connect the device to the robot via the debug port to make sure that it works are you want to! To do this:
 1. Turn the robot off
@@ -100,23 +103,10 @@ This is the webserver of the device. It will show up as not connected since we a
     |TX|GPIO16|
     |GND|GND|
 
-    ![Connection diagram](pics/setup/noha-step_4-connection-diagram.png)
+    ![Connection diagram](pics/setup/step_4-connection-diagram.png)
 4. Turn the robot back on, this should power up the ESP device and you can now go to the webserver interface page we saw before and the data from the robot should now show up!
-    # todo: add image
+    ![Webserver connected](pics/setup/step_4-webserver-connected.png)
 5. Click the different buttons to make sure that it works, if you have a D3-D7, drive it around with the manual mode, however, remeber that the bumper is off!
-
-Now you will need to connect to the robot over it's serial debug port. 
-
-To verify that everything works, either if you just want to try this out, or test what pins you can use before making a permanent installation you should take the bumper off and connect to the debug pins directly.
-![debug-port-with-cables-annotated](./pics/d3/debug-port-with-cables-annotated.jpg)
-
-| Robot | ESP |
-|---|---|
-|RX|TX (pin you picked)|
-|3.3V|VCC / 3.3V|
-|TX|RX (pin you picked)|
-|GND|GND|
-
 
 ## Step 5
 
@@ -124,12 +114,14 @@ After flashing and connecting the ESP device to the robot we need to add the ESP
 1. Power the robot on if it is off
 2. In Home Assistant navigate to: `Settings` --> `Devices & Services` -- `Click "Add integration"` --> `Search "ESPHome"`
 3. Enter the hostname or ip address of the ESPHome device
-    - If you haven't change the name of the device in the config, it is most likely `neato-vacuum.local` or `neato-vacuum.lan` depending on your router.
+    - If you haven't change the name of the device in the config, it is most likely `neato-vacuum.local` or `neato-vacuum.lan` depending on your router. It is the same as the link that worked before in step 4.
     - If you want to use the ip address, find what ip the device got in your router. If you decide to use the ip, make sure to set it static!
 4. Click submit and the device should be added.
 
 ## Step 6
-Copy the contents of [ha-card](https://github.com/philip2809/neato-connected/releases/latest/download/ha-card.yaml)
+Copy the contents of the Home Assistant card for your vacuum generation
+- [`gen2`](https://github.com/philip2809/neato-connected/releases/latest/download/ha-card_gen2.yaml)
+- [`gen3`](https://github.com/philip2809/neato-connected/releases/latest/download/ha-card_gen3.yaml)
 
 **If you have changed the name in the ESPHome config:**
 1. Paste the content into a text editor
@@ -143,12 +135,12 @@ Copy the contents of [ha-card](https://github.com/philip2809/neato-connected/rel
 1. Press the pen icon in the top right on the desired dashboard
 2. Press `Add card`
 3. Scroll to the buttom and select `Manual`
-4. Paste the contents of the card (if you changed the name, then you need to modify it in here)
+4. Paste the contents of the card (if you changed the name, then the version that you changed)
 
 ### Vacuum Entity
 You can also use neato-connected as an Home Assistant vacuum entity. The vacuum entity is needed in case you want to use any of the automations or scripts.
 
-# todo: add picture of vacuum entity
+![Vacuum entity](pics/setup/ha-step_6-vacuum-entity.png)
 
 Sadly vacuum entities can only be added by editing the Home Assistant config files, however, I will walk though the entire proccess!
 1. Going to `Settings` --> `Add-ons` --> `Add-on Store` --> `Open "File editor"`.
@@ -174,7 +166,7 @@ Via Home Assistant you can also schedule your robot, this allows for smarter sch
 3. Add a trigger, for example that the vacuum should run every day at 08:00
 4. Send an event to start the vacuum, either via the button esphome created **OR** via the vacuum entity you created
 
-![Home Assistant Schedule Automation](pics/setup/ha-step_7-schedule-automation.png)
+![Home Assistant Schedule Automation](pics/setup/ha-step_6-schedule-automation.png)
 
 You can add as many triggers you want, any trigger added will cause the automation to run, and then you can add `And if` rules to make sure it is only tirggered when all conditions added there are meet.
 
@@ -197,12 +189,6 @@ Remove the alert part in case you don't have a gen3 robot. You can also use the 
 
 ## Step 7
 **Before you make a permanent installation, make sure it all works via Home Assistant as you want it to!**
-
-And once you are ready for the permanent installation, you there is two ways to do it:
-
-[Externally; by drilling a hole in the bumper](./install-externally.md) | [Internally; by connecting to the debug port using an JST-XH connector (recommended)](./install-internally.md)
-:-------------------------:|:-------------------------:
-![cables-via-bumper](./pics/d3/cables-via-bumper.jpg) ![d3-install-outside](./pics/installs/d3-install-outside.png) | ![jay-jst-xh](./pics/installs/jay/2-install-JST-XH.jpg) ![jay-installed](./pics/installs/jay/4-installed-and-taped.jpg)
 
 
 ## Step 8
