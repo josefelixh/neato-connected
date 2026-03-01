@@ -65,6 +65,8 @@ This is the webserver of the device. It will show up as not "loading..." since w
     |TX|GPIO16|
     |GND|GND|
 
+    **ESP32-C3 HAS TX ON GPIO7 and RX ON GPIO6, so in that case just remove the "1" from the image below, connect the blue wire to GPIO6 and yellow wire to GPIO7**
+
     ![Connection diagram](pics/setup/step_4-connection-diagram.png)
 4. Turn the robot back on, this should power up the ESP device and you can now go to the webserver interface page we saw before and the data from the robot should now show up!
     ![Webserver connected](pics/setup/step_4-webserver-connected.png)

@@ -98,7 +98,7 @@ How do you want to continue?
 
 ![Neato robot normals ide up. Screws to remove are marked](pics/installs/jay/1a-removing-two-more-screws.jpg "Remove two more screws")
 
-11. Pull of the top cover by pushing the two tabs at the front out of the way.
+11. Remove the top cover by pushing the two tabs at the front.
 
 12. Double check again that you've removed the battery before continuing. There should be no LEDs on at this point.
 
