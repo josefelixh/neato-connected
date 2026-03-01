@@ -1,0 +1,1591 @@
+Using Docker: esphome/esphome:latest
+Validating neato-esp-modular.yaml...
+[32mINFO ESPHome 2026.1.0[0m
+[32mINFO Reading configuration /config/neato-esp-modular.yaml...[0m
+substitutions:
+  uart_tx: GPIO21
+  uart_rx: GPIO20
+  device_name: neato-esp
+  friendly_name: Neato Robot
+  wifi_domain: .lan
+  comment: ''
+  infointerval: 2sec
+  chargerinterval: 2min
+  version: 1.2-b.7
+  type: gen3
+  buildinfo: 1.2-b.7-[GPIO21/GPIO20]
+  time_platform: homeassistant
+  timezone: null
+esphome:
+  name: neato-esp
+  name_add_mac_suffix: false
+  friendly_name: Neato Robot
+  project:
+    name: philip2809.neato-connected
+    version: 1.2-b.7-[GPIO21/GPIO20]
+  comment: gen3|1.2-b.7-[GPIO21/GPIO20]|
+  on_boot:
+    - priority: 600.0
+      then:
+        - lambda: !lambda |-
+            id(uiState).publish_state("Starting...");
+        - logger.set_level:
+            level: INFO
+    - priority: -100.0
+      then:
+        - lambda: !lambda |-
+            id(uiState).publish_state("Starting...");
+
+            ESPTime t = ESPTime::from_epoch_local(id(g_last_cleaning_start_time));
+            std::string ts = t.strftime("%Y-%m-%d %H:%M:%S");
+            id(last_cleaning_time).publish_state(ts.c_str());
+
+            if (id(g_last_cleaning_type) == 0) {
+              id(last_cleaning_type).publish_state("HOUSE");
+            } else if (id(g_last_cleaning_type) == 1) {
+              id(last_cleaning_type).publish_state("SPOT");
+            }
+
+            id(last_cleaning_duration).publish_state(id(g_last_cleaning_duration));
+
+            // Update nbs_time and text entity from persisted global
+            if (!id(g_timezone).empty()) {
+              id(nbs_time).set_timezone(id(g_timezone).c_str());
+              id(timezone_text).publish_state(id(g_timezone).c_str());
+              ESP_LOGI("timezone", "Restored timezone: %s", id(g_timezone).c_str());
+            }
+
+            char buf[40];
+            snprintf(
+              buf, sizeof(buf),
+              "%u,%u,%u,%u,%u,%u,%u,%u",
+              id(g_schedule)[0],
+              id(g_schedule)[1],
+              id(g_schedule)[2],
+              id(g_schedule)[3],
+              id(g_schedule)[4],
+              id(g_schedule)[5],
+              id(g_schedule)[6],
+              id(g_schedule)[7]
+            );
+
+            id(scheduleset).publish_state(buf);
+  min_version: 2026.1.0
+  build_path: build/neato-esp
+  platformio_options: {}
+  environment_variables: {}
+  includes: []
+  includes_c: []
+  libraries: []
+  debug_scheduler: false
+  areas: []
+  devices: []
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: esp-idf
+    version: 5.5.2
+    sdkconfig_options: {}
+    log_level: ERROR
+    advanced:
+      compiler_optimization: SIZE
+      enable_idf_experimental_features: false
+      enable_lwip_assert: true
+      ignore_efuse_custom_mac: false
+      ignore_efuse_mac_crc: false
+      enable_lwip_mdns_queries: true
+      enable_lwip_bridge_interface: false
+      enable_lwip_tcpip_core_locking: true
+      enable_lwip_check_thread_safety: true
+      disable_libc_locks_in_iram: true
+      disable_vfs_support_termios: true
+      disable_vfs_support_select: true
+      disable_vfs_support_dir: true
+      freertos_in_iram: false
+      ringbuf_in_iram: false
+      heap_in_iram: false
+      execute_from_psram: false
+      loop_task_stack_size: 8192
+      enable_ota_rollback: true
+    components: []
+    platform_version: https://github.com/pioarduino/platform-espressif32/releases/download/55.03.35/platform-espressif32.zip
+    source: pioarduino/framework-espidf@https://github.com/pioarduino/esp-idf/releases/download/v5.5.2/esp-idf-v5.5.2.tar.xz
+  flash_size: 4MB
+  variant: ESP32C3
+  cpu_frequency: 160MHZ
+udp:
+  - id: udp_component
+    addresses:
+      - !secret 'syslog_server'
+    port: 18511
+    listen_address: 255.255.255.255
+syslog:
+  udp_id: udp_component
+  port: 514
+  strip: true
+  level: DEBUG
+  facility: 16
+logger:
+  baud_rate: 0
+  level: DEBUG
+  logs:
+    uart_parser: DEBUG
+    uart: INFO
+    sensor: INFO
+    binary_sensor: INFO
+    text_sensor: INFO
+    switch: INFO
+    button: INFO
+    script: INFO
+    api: WARN
+    ota: INFO
+  tx_buffer_size: 512
+  deassert_rts_dtr: false
+  task_log_buffer_size: 768
+  hardware_uart: USB_SERIAL_JTAG
+  runtime_tag_levels: false
+web_server:
+  port: 80
+  js_url: https://cdn.jsdelivr.net/gh/philip2809/neato-connected@next/docs/esphome-config/1.2-b.7.js
+  local: true
+  ota: false
+  version: 2
+  enable_private_network_access: true
+  include_internal: false
+  log: true
+  compression: gzip
+  css_url: ''
+sensor:
+  - platform: wifi_signal
+    name: WiFi Signal
+    update_interval: 60s
+    entity_category: diagnostic
+    disabled_by_default: false
+    force_update: false
+    unit_of_measurement: dBm
+    accuracy_decimals: 0
+    device_class: signal_strength
+    state_class: measurement
+  - platform: uptime
+    name: Uptime
+    update_interval: 60s
+    entity_category: diagnostic
+    disabled_by_default: false
+    force_update: false
+    unit_of_measurement: s
+    icon: mdi:timer-outline
+    accuracy_decimals: 0
+    device_class: duration
+    state_class: total_increasing
+    type: seconds
+  - platform: debug
+    free:
+      name: Free Heap
+      entity_category: diagnostic
+      disabled_by_default: false
+      force_update: false
+      unit_of_measurement: B
+      icon: mdi:counter
+      accuracy_decimals: 0
+  - platform: debug
+    block:
+      name: Largest Free Block
+      entity_category: diagnostic
+      disabled_by_default: false
+      force_update: false
+      unit_of_measurement: B
+      icon: mdi:counter
+      accuracy_decimals: 0
+  - platform: debug
+    loop_time:
+      name: Loop Time
+      entity_category: diagnostic
+      disabled_by_default: false
+      force_update: false
+      unit_of_measurement: ms
+      icon: mdi:timer-outline
+      accuracy_decimals: 0
+  - platform: template
+    id: chargerFuelPercent
+    name: Fuel Percent
+    unit_of_measurement: '%'
+    disabled_by_default: false
+    force_update: false
+    accuracy_decimals: 1
+    update_interval: 60s
+  - platform: template
+    id: chargerBattTempCAvg
+    name: Battery Temp C Avg
+    unit_of_measurement: °C
+    entity_category: diagnostic
+    disabled_by_default: false
+    force_update: false
+    accuracy_decimals: 1
+    update_interval: 60s
+  - platform: template
+    id: chargerVBattV
+    name: Battery Voltage V
+    unit_of_measurement: V
+    entity_category: diagnostic
+    disabled_by_default: false
+    force_update: false
+    accuracy_decimals: 1
+    update_interval: 60s
+  - platform: template
+    id: chargerVExtV
+    name: External Voltage V
+    unit_of_measurement: V
+    entity_category: diagnostic
+    disabled_by_default: false
+    force_update: false
+    accuracy_decimals: 1
+    update_interval: 60s
+  - platform: template
+    id: chargerCharger_mAH
+    name: Charger mAh
+    unit_of_measurement: mAh
+    entity_category: diagnostic
+    disabled_by_default: false
+    force_update: false
+    accuracy_decimals: 1
+    update_interval: 60s
+  - platform: template
+    id: chargerDischarge_mAH
+    name: Discharge mAh
+    unit_of_measurement: mAh
+    entity_category: diagnostic
+    disabled_by_default: false
+    force_update: false
+    accuracy_decimals: 1
+    update_interval: 60s
+  - platform: template
+    name: Filter Change Time
+    id: filterChangeTime
+    unit_of_measurement: s
+    entity_category: diagnostic
+    disabled_by_default: false
+    force_update: false
+    accuracy_decimals: 1
+    update_interval: 60s
+  - platform: template
+    name: Brush Change Time
+    id: brushChangeTime
+    unit_of_measurement: s
+    entity_category: diagnostic
+    disabled_by_default: false
+    force_update: false
+    accuracy_decimals: 1
+    update_interval: 60s
+  - platform: template
+    name: Dirt Bin Alert Reminder
+    id: dirtBinAlertReminder
+    unit_of_measurement: min
+    entity_category: diagnostic
+    disabled_by_default: false
+    force_update: false
+    accuracy_decimals: 1
+    update_interval: 60s
+  - platform: template
+    name: Current Dirt Bin Runtime
+    id: currentDirtBinRuntime
+    unit_of_measurement: s
+    entity_category: diagnostic
+    disabled_by_default: false
+    force_update: false
+    accuracy_decimals: 1
+    update_interval: 60s
+  - platform: template
+    name: Number of Full Dust Bin Cleanings
+    id: numberDustBinFull
+    unit_of_measurement: count
+    entity_category: diagnostic
+    disabled_by_default: false
+    force_update: false
+    accuracy_decimals: 1
+    update_interval: 60s
+  - platform: template
+    name: Battery Cycles
+    id: batteryCycles
+    unit_of_measurement: cycles
+    entity_category: diagnostic
+    disabled_by_default: false
+    force_update: false
+    accuracy_decimals: 1
+    update_interval: 60s
+  - platform: template
+    name: Last cleaning duration
+    id: last_cleaning_duration
+    unit_of_measurement: min
+    disabled_by_default: false
+    force_update: false
+    accuracy_decimals: 1
+    update_interval: 60s
+debug:
+  update_interval: 30s
+text_sensor:
+  - platform: debug
+    device:
+      name: Device Info
+      entity_category: diagnostic
+      disabled_by_default: false
+      icon: mdi:chip
+  - platform: debug
+    reset_reason:
+      name: Reset Reason
+      entity_category: diagnostic
+      disabled_by_default: false
+      icon: mdi:restart
+  - platform: template
+    id: nbs_time_text
+    name: NBS Time
+    lambda: !lambda |-
+      char buf[10];
+      auto t = id(nbs_time).now();
+      snprintf(buf, sizeof(buf), "%02d:%02d", t.hour, t.minute);
+      return std::string(buf);
+    disabled_by_default: false
+    update_interval: 60s
+  - platform: template
+    name: Last cleaning time
+    id: last_cleaning_time
+    disabled_by_default: false
+    update_interval: 60s
+  - platform: template
+    name: Last cleaning type
+    id: last_cleaning_type
+    disabled_by_default: false
+    update_interval: 60s
+  - platform: template
+    id: robotError
+    name: Robot Error
+    disabled_by_default: false
+    update_interval: 60s
+  - platform: template
+    id: robotAlert
+    name: Robot Alert
+    disabled_by_default: false
+    update_interval: 60s
+  - platform: template
+    id: robotSerial
+    name: Serial Number
+    entity_category: diagnostic
+    on_value:
+      - then:
+          - lambda: !lambda |-
+              // Get the mac address, abort  if the serial is malformed
+              size_t comma_pos = x.find(',');
+              if (comma_pos == std::string::npos) {
+                ESP_LOGE("config", "Serial invalid (no comma): %s", x.c_str());
+                abort();
+              }
+
+              std::string mac = x.substr(comma_pos + 1, 12);
+
+              if (mac.length() != 12) {
+                ESP_LOGE("config", "Invalid MAC length (%d): %s", mac.length(), mac.c_str());
+                abort();
+              }
+
+              // Calculate based on mac
+              static uint8_t t1[256];
+              static uint8_t t2[256];
+              static char result[128];
+              const uint8_t byte_array[] = { 0x68, 0x36, 0x43, 0x58, 0x09, 0x09, 0x3A, 0x3C, 0x2A, 0x7B, 0x59 };
+
+              for (int i = 0; i < 256; i++)
+                t1[i] = i;
+
+              int j = 0, i = 0;
+              for (int i = 0; i < 256; i++) {
+                j = (j + t1[i] + byte_array[i % 11]) & 0xFF;
+                uint8_t tmp = t1[i];
+                t1[i] = t1[j];
+                t1[j] = tmp;
+              }
+
+              j = 0;
+              for (size_t k = 0; k < 12; k++) {
+                i = (i + 1) & 0xFF;
+                j = (j + t1[i]) & 0xFF;
+
+                uint8_t tmp = t1[i];
+                t1[i] = t1[j];
+                t1[j] = tmp;
+
+                t2[k] = t1[(t1[i] + t1[j]) & 0xFF];
+              }
+
+              size_t len = mac.length();
+
+              for (size_t j = 0; j < len; j++) {
+                snprintf(&result[j * 2], 3, "%02x", t2[j] ^ (uint8_t) mac[j]);
+              }
+
+              result[len * 2] = result[len / 2];
+              id(robot_skey) = std::string(result);
+    disabled_by_default: false
+    update_interval: 60s
+  - platform: template
+    id: robotModel
+    name: Model
+    entity_category: diagnostic
+    disabled_by_default: false
+    update_interval: 60s
+  - platform: template
+    id: robotSoftware
+    name: Software
+    entity_category: diagnostic
+    disabled_by_default: false
+    update_interval: 60s
+  - platform: template
+    name: UI State
+    id: uiState
+    disabled_by_default: false
+    update_interval: 60s
+  - platform: template
+    name: Robot State
+    id: robotState
+    disabled_by_default: false
+    update_interval: 60s
+ota:
+  - platform: esphome
+    password: \033[5m!secret 'neato_vacuum_ota'\033[6m
+    version: 2
+    port: 3232
+wifi:
+  domain: .lan
+  reboot_timeout: 15min
+  power_save_mode: LIGHT
+  fast_connect: false
+  enable_btm: false
+  enable_rrm: false
+  passive_scan: false
+  enable_on_boot: true
+  post_connect_roaming: true
+  min_auth_mode: WPA2
+  networks:
+    - ssid: \033[5m!secret 'wifi_ssid'\033[6m
+      password: \033[5m!secret 'wifi_password'\033[6m
+      priority: 0
+  use_address: neato-esp.lan
+script:
+  - id: get_user_settings
+    mode: queued
+    then:
+      - delay: 100ms
+      - uart.write:
+          data: !!binary |
+            R2V0VXNlclNldHRpbmdzIAo=
+    parameters: {}
+    max_runs: 5
+  - id: get_all_data
+    mode: queued
+    then:
+      - uart.write:
+          data: !!binary |
+            R2V0RXJyIAo=
+      - delay: 50ms
+      - uart.write:
+          data: !!binary |
+            R2V0U3RhdGUgCg==
+      - delay: 50ms
+      - uart.write:
+          data: !!binary |
+            R2V0Q2hhcmdlciAK
+      - delay: 50ms
+      - uart.write:
+          data: !!binary |
+            R2V0VXNlclNldHRpbmdzIAo=
+      - delay: 50ms
+      - uart.write:
+          data: !!binary |
+            R2V0V2FycmFudHkgCg==
+      - delay: 50ms
+      - uart.write:
+          data: !!binary |
+            VGVzdE1vZGUgCg==
+      - delay: 50ms
+      - uart.write:
+          data: !!binary |
+            R2V0VmVyc2lvbiAK
+    parameters: {}
+    max_runs: 5
+  - id: initial_data_get
+    mode: queued
+    then:
+      - delay: 5s
+      - script.execute:
+          id: get_all_data
+    parameters: {}
+    max_runs: 5
+  - id: robotShutdown
+    mode: queued
+    then:
+      - lambda: !lambda |-
+          id(uiState).publish_state("Shutting down...");
+      - uart.write:
+          data: !!binary |
+            VGVzdE1vZGUgT24gCg==
+      - delay: 100ms
+      - uart.write:
+          data: !!binary |
+            U2V0U3lzdGVtTW9kZSBTaHV0ZG93biAK
+    parameters: {}
+    max_runs: 5
+  - id: powercycle
+    mode: queued
+    then:
+      - lambda: !lambda |-
+          id(initial_ready) = false;
+      - lambda: !lambda |-
+          id(uiState).publish_state("Shutting down...");
+      - uart.write:
+          data: !!binary |
+            VGVzdE1vZGUgT24gCg==
+      - delay: 100ms
+      - uart.write:
+          data: !!binary |
+            U2V0U3lzdGVtTW9kZSBQb3dlckN5Y2xlIAo=
+    parameters: {}
+    max_runs: 5
+  - id: cleaning_stopped
+    then:
+      - lambda: !lambda |-
+          uint64_t now_ts = id(nbs_time).now().timestamp;
+          uint64_t start_ts = id(g_last_cleaning_start_time);
+
+          if (start_ts > 0) {
+              uint32_t duration_min = (now_ts - start_ts) / 60;
+              id(g_last_cleaning_duration) = duration_min;
+              id(last_cleaning_duration).publish_state(duration_min);
+          }
+    mode: single
+    parameters: {}
+  - id: play_extra_sounds
+    parameters:
+      soundid: int
+    then:
+      - if:
+          condition:
+            lambda: !lambda |-
+              return id(g_play_extra_sounds);
+          then:
+            - uart.write:
+                data: !lambda |-
+                  std::string s =
+                    "PlaySound SoundId " + std::to_string(soundid) + "\n";
+                  return std::vector<uint8_t>(s.begin(), s.end());
+    mode: single
+  - id: send_event
+    parameters:
+      event: string
+    then:
+      - uart.write:
+          data: !lambda |-
+            std::string s =
+              "SetEvent event " + event + " SKey " + id(robot_skey) + "\n";
+            return std::vector<uint8_t>(s.begin(), s.end());
+    mode: single
+globals:
+  - id: initial_ready
+    type: bool
+    restore_value: false
+    initial_value: 'false'
+  - id: robot_skey
+    type: std::string
+    restore_value: false
+  - id: g_last_cleaning_start_time
+    type: uint64_t
+    restore_value: true
+  - id: g_last_cleaning_type
+    type: uint32_t
+    restore_value: true
+  - id: g_last_cleaning_duration
+    type: uint32_t
+    restore_value: true
+  - id: g_play_extra_sounds
+    type: bool
+    restore_value: true
+  - id: g_schedule
+    type: uint8_t[8]
+    restore_value: true
+    initial_value: '{0,0,0,0,0,0,0,0}'
+  - id: g_timezone
+    type: std::string
+    restore_value: true
+    initial_value: ''
+interval:
+  - interval: 2s
+    then:
+      - uart.write:
+          data: !!binary |
+            R2V0RXJyIAo=
+      - uart.write:
+          data: !!binary |
+            R2V0U3RhdGUgCg==
+    startup_delay: 0s
+  - interval: 2min
+    then:
+      - uart.write:
+          data: !!binary |
+            R2V0Q2hhcmdlciAK
+    startup_delay: 0s
+api:
+  encryption:
+    key: \033[5m!secret 'neato_vacuum_api'\033[6m
+  actions:
+    - action: send_cmd
+      variables:
+        command: string
+      then:
+        - uart.write:
+            data: !lambda |-
+              // Convert to std::string
+              std::string s = command;
+
+              // IMPORTANT: keep newline exactly like YAML version
+              if (s.empty() || s.back() != '\n')
+                s += "\n";
+
+              // convert string → vector<uint8_t>
+              return std::vector<uint8_t>(s.begin(), s.end());
+      supports_response: none
+    - action: play_sound
+      variables:
+        soundid: int
+      then:
+        - uart.write:
+            data: !lambda |-
+              // Create std::string
+              std::string s = "PlaySound SoundId " + std::to_string(soundid) + "\n";
+              // convert string → vector<uint8_t>
+              return std::vector<uint8_t>(s.begin(), s.end());
+      supports_response: none
+  port: 6053
+  reboot_timeout: 15min
+  batch_delay: 100ms
+  custom_services: false
+  homeassistant_services: false
+  homeassistant_states: false
+  listen_backlog: 4
+  max_connections: 8
+  max_send_queue: 8
+uart:
+  - id: uart_bus
+    baud_rate: 115200
+    tx_pin:
+      number: 21
+      mode:
+        output: true
+        input: false
+        open_drain: false
+        pullup: false
+        pulldown: false
+      inverted: false
+      ignore_pin_validation_error: false
+      ignore_strapping_warning: false
+      drive_strength: 20.0
+    rx_pin:
+      number: 20
+      mode:
+        input: true
+        output: false
+        open_drain: false
+        pullup: false
+        pulldown: false
+      inverted: false
+      ignore_pin_validation_error: false
+      ignore_strapping_warning: false
+      drive_strength: 20.0
+    rx_buffer_size: 65535
+    debug:
+      dummy_receiver: true
+      direction: RX
+      after:
+        bytes: 0
+        delimiter: !!binary |
+          Gg==
+        timeout: 100ms
+      sequence:
+        - then:
+            - lambda: !lambda "UARTDebug::log_string(direction, bytes);\n\n// convert\
+                \ bytes -> std::string\nstd::string str(bytes.begin(), bytes.end());\n\
+                \n// ---- TRIM FUNCTION ----\nauto trim = [](std::string &s) {\n \
+                \ // trim leading\n  s.erase(s.begin(), std::find_if(s.begin(), s.end(),\n\
+                \      [](unsigned char ch){ return !std::isspace(ch); }));\n  //\
+                \ trim trailing\n  s.erase(std::find_if(s.rbegin(), s.rend(),\n  \
+                \    [](unsigned char ch){ return !std::isspace(ch); }).base(), s.end());\n\
+                };\n\n// --- HEX DECODER ---\nauto hex_to_uint32 = [](const std::string\
+                \ &hex) -> uint32_t {\n    return static_cast<uint32_t>(strtoul(hex.c_str(),\
+                \ nullptr, 16));\n};\n\n// ---- SPLIT ON CRLF ----\nstd::vector<std::string>\
+                \ lines;\nsize_t start = 0;\nsize_t end = 0;\n\nwhile ((end = str.find(\"\
+                \\r\\n\", start)) != std::string::npos) {\n  std::string line = str.substr(start,\
+                \ end - start);\n  trim(line);\n  if (!line.empty()) lines.push_back(line);\n\
+                \  start = end + 2;\n}\n\nif (start < str.size()) {\n  std::string\
+                \ last = str.substr(start);\n  trim(last);\n  if (!last.empty()) lines.push_back(last);\n\
+                }\n\nif (lines.empty()) return;\n\n// ---- DETECT WHICH COMMAND WAS\
+                \ USED ----\nstd::string command = lines[0];  // first line (GetErr,\
+                \ GetState, etc.)\n\n\nESP_LOGI(\"uart_parser\", \"COMMAND: %s\",\
+                \ command.c_str());\n// ---- OPTIONAL: print each line for debugging\
+                \ ----\nfor (auto &line : lines) {\n  std::vector<uint8_t> v(line.begin(),\
+                \ line.end());\n  UARTDebug::log_string(direction, v);\n  //ESP_LOGI(\"\
+                uart_parser\", \"LINE: %s\", line.c_str());\n}\n\n\n\n// ---- SPECIAL\
+                \ PARSING FOR GetErr ----\nif (command == \"GetErr\") {\n  // A GetErr\
+                \ response looks like:\n  // 0: GetErr\n  // 1: Error\n  // 2: <error1>\n\
+                \  // 3: Alert\n  // 4: <error2>\n  // 5: USB state\n  // 6: NOT connected\n\
+                \n  if (lines.size() < 7) return;\n  if (lines[1] != \"Error\" ||\
+                \ lines[3] != \"Alert\") return;\n\n  id(robotError).publish_state(lines[2].c_str());\n\
+                \  id(robotAlert).publish_state(lines[4].c_str());\n  id(usbConnected).publish_state(lines[6].find(\"\
+                NOT connected\") == std::string::npos);\n\n  // If we can get erros/alerts,\
+                \ the system is ready for other commands:\n  if (!id(initial_ready))\
+                \ {\n      id(initial_ready) = true;\n      id(initial_data_get).execute();\n\
+                \  }\n}\nelse if (command == \"GetCharger\") {\n  // Format after\
+                \ the header:\n  // Label,Value\n  // FuelPercent,53\n  // BatteryOverTemp,0\n\
+                \  // ...\n\n  for (size_t i = 2; i < lines.size(); i++) {\n    std::string\
+                \ &line = lines[i];\n\n    size_t comma = line.find(',');\n    if\
+                \ (comma == std::string::npos) continue;\n\n    std::string key =\
+                \ line.substr(0, comma);\n    std::string value = line.substr(comma\
+                \ + 1);\n\n    // Trim them:\n    trim(key);\n    trim(value);\n\n\
+                \    // ---- MATCH KEYS AND PUBLISH ----\n         if (key == \"FuelPercent\"\
+                ) id(chargerFuelPercent).publish_state(atof(value.c_str()));\n   \
+                \ else if (key == \"BatteryOverTemp\") id(chargerBatteryOverTemp).publish_state(value\
+                \ == \"1\");\n    else if (key == \"ChargingActive\") id(chargerChargingActive).publish_state(value\
+                \ == \"1\");\n    else if (key == \"ChargingEnabled\") id(chargerChargingEnabled).publish_state(value\
+                \ == \"1\");\n    else if (key == \"ConfidentOnFuel\") id(chargerConfidentOnFuel).publish_state(value\
+                \ == \"1\");\n    else if (key == \"OnReservedFuel\") id(chargerOnReservedFuel).publish_state(value\
+                \ == \"1\");\n    else if (key == \"EmptyFuel\") id(chargerEmptyFuel).publish_state(value\
+                \ == \"1\");\n    else if (key == \"BatteryFailure\") id(chargerBatteryFailure).publish_state(value\
+                \ == \"1\");\n    else if (key == \"ExtPwrPresent\") id(chargerExtPwrPresent).publish_state(value\
+                \ == \"1\");\n    else if (key == \"ThermistorPresent\") id(chargerThermistorPresent).publish_state(value\
+                \ == \"1\");\n    else if (key == \"BattTempCAvg\") id(chargerBattTempCAvg).publish_state(atof(value.c_str()));\n\
+                \    else if (key == \"VBattV\") id(chargerVBattV).publish_state(atof(value.c_str()));\n\
+                \    else if (key == \"VExtV\") id(chargerVExtV).publish_state(atof(value.c_str()));\n\
+                \    else if (key == \"Charger_mAH\") id(chargerCharger_mAH).publish_state(atof(value.c_str()));\n\
+                \    else if (key == \"Discharge_mAH\") id(chargerDischarge_mAH).publish_state(atof(value.c_str()));\n\
+                \  }\n}\n\nelse if (command == \"GetWarranty\") {\n    // Format after\
+                \ the header:\n    // Item,Value\n    // CumulativeCleaningTimeInSecs,001ce34f\n\
+                \    // CumulativeBatteryCycles,01f7\n    // ValidationCode,15648b6e\n\
+                \n    for (size_t i = 2; i < lines.size(); i++) {\n        std::string\
+                \ &line = lines[i];\n        size_t comma = line.find(',');\n    \
+                \    if (comma == std::string::npos) continue;\n\n        std::string\
+                \ key = line.substr(0, comma);\n        std::string value = line.substr(comma\
+                \ + 1);\n\n        // Trim whitespace\n        trim(key);\n      \
+                \  trim(value);\n        \n        if (key == \"CumulativeBatteryCycles\"\
+                ) {\n            uint32_t cycles = hex_to_uint32(value);\n       \
+                \     id(batteryCycles).publish_state(cycles);\n        }\n    }\n\
+                }\n\nelse if (command == \"GetVersion\") {\n  for (auto &line : lines)\
+                \ {\n    size_t comma = line.find(',');\n    if (comma == std::string::npos)\
+                \ continue;\n\n    std::string key = line.substr(0, comma);\n    std::string\
+                \ value = line.substr(comma + 1);\n    trim(key);\n    trim(value);\n\
+                \n         if (key == \"Serial Number\") id(robotSerial).publish_state(value.c_str());\n\
+                \    else if (key == \"Model\") id(robotModel).publish_state(value.c_str());\n\
+                \    else if (key == \"Software\") id(robotSoftware).publish_state(value.c_str());\n\
+                \  }\n}\n// ------------------------------ TESTMODE -----------------------------------------\n\
+                else if (command == \"TestMode\") {\n  ESP_LOGI(\"testmode\", \"LINE1:\
+                \ %s\", lines[1].c_str());\n  //ESP_LOGI(\"testmode\", \"LINE1: %s\"\
+                , lines[1].c_str());\n  if (lines[1].find(\": On\") != std::string::npos)\
+                \ id(testMode).publish_state(true);\n  else if (lines[1].find(\":\
+                \ Off\") != std::string::npos) id(testMode).publish_state(false);\n\
+                } \n\nelse if (command == \"GetState\") {\n    std::string &states_line\
+                \ = lines[1];  // \"Current UI State is: ...\\nCurrent Robot State\
+                \ is: ...\\n\\x1A\"\n\n    size_t sep = states_line.find('\\n');\n\
+                \    if (sep == std::string::npos) return;  // safety\n\n    std::string\
+                \ ui_line = states_line.substr(0, sep);\n    std::string robot_line\
+                \ = states_line.substr(sep + 1);\n\n    static const char* prefix_ui\
+                \ = \"Current UI State is: \";\n    static const char* prefix_robot\
+                \ = \"Current Robot State is: \";\n\n    // Extract UI state\n   \
+                \ if (ui_line.find(prefix_ui) == 0) {\n        std::string ui_state\
+                \ = ui_line.substr(strlen(prefix_ui));\n        trim(ui_state);\n\
+                \        std::string old_state = id(uiState).state;\n\n        bool\
+                \ old_spot = (old_state == \"UIMGR_STATE_SPOTCLEANINGPAUSED\" ||\n\
+                \                        old_state == \"UIMGR_STATE_SPOTCLEANINGRUNNING\"\
+                );\n\n        bool new_spot = (ui_state == \"UIMGR_STATE_SPOTCLEANINGPAUSED\"\
+                \ ||\n                        ui_state == \"UIMGR_STATE_SPOTCLEANINGRUNNING\"\
+                );\n\n        bool old_house = (old_state == \"UIMGR_STATE_HOUSECLEANINGPAUSED\"\
+                \ ||\n                          old_state == \"UIMGR_STATE_HOUSECLEANINGRUNNING\"\
+                );\n\n        bool new_house = (ui_state == \"UIMGR_STATE_HOUSECLEANINGPAUSED\"\
+                \ ||\n                          ui_state == \"UIMGR_STATE_HOUSECLEANINGRUNNING\"\
+                );\n        // Cleaning started\n        if (!old_spot && new_spot)\
+                \ {\n            // Mark start time\n            id(g_last_cleaning_start_time)\
+                \ = id(nbs_time).now().timestamp;\n            id(g_last_cleaning_type)\
+                \ = 1;  // SPOT = 1\n\n            id(last_cleaning_time).publish_state(id(nbs_time).now().strftime(\"\
+                %Y-%m-%d %H:%M:%S\"));\n            id(last_cleaning_type).publish_state(\"\
+                SPOT\");\n        } else if (!old_house && new_house) {\n        \
+                \    id(g_last_cleaning_start_time) = id(nbs_time).now().timestamp;\n\
+                \            id(g_last_cleaning_type) = 0;  // HOUSE = 0\n\n     \
+                \       id(last_cleaning_time).publish_state(id(nbs_time).now().strftime(\"\
+                %Y-%m-%d %H:%M:%S\"));\n            id(last_cleaning_type).publish_state(\"\
+                HOUSE\");\n        } else {\n            // Cleaning stopped\n   \
+                \         bool old_cleaning = old_spot || old_house;\n           \
+                \ bool new_cleaning = new_spot || new_house;\n\n            if (old_cleaning\
+                \ && !new_cleaning) id(cleaning_stopped).execute();\n        }\n\n\
+                \        id(uiState).publish_state(ui_state.c_str());\n    }\n\n \
+                \   // Extract Robot state\n    if (robot_line.find(prefix_robot)\
+                \ == 0) {\n        std::string robot_state = robot_line.substr(strlen(prefix_robot));\n\
+                \        trim(robot_state);\n        id(robotState).publish_state(robot_state.c_str());\n\
+                \    }\n}\n\n\nelse if (command == \"GetUserSettings\") {\n  for (auto\
+                \ &line : lines) {\n    trim(line);\n\n    // Skip lines that start\
+                \ with binary/invalid chars\n    if (!line.empty() && static_cast<unsigned\
+                \ char>(line[0]) >= 0x80) continue;\n\n    // ---- Key,Value lines\
+                \ ----\n    size_t comma = line.find(',');\n    if (comma != std::string::npos)\
+                \ {\n      std::string key = line.substr(0, comma);\n      std::string\
+                \ value = line.substr(comma + 1);\n      trim(key);\n      trim(value);\n\
+                \n           if (key == \"ClickSounds\") id(clickSounds).publish_state(value\
+                \ == \"ON\");\n      else if (key == \"LED\") id(led).publish_state(value\
+                \ == \"ON\");\n      else if (key == \"Wall Enable\") id(wallEnable).publish_state(value\
+                \ == \"ON\");\n      else if (key == \"Eco Mode\") id(ecoMode).publish_state(value\
+                \ == \"ON\");\n      else if (key == \"IntenseClean\") id(intenseClean).publish_state(value\
+                \ == \"ON\");\n      else if (key == \"WiFi\") id(wifiOnOff).publish_state(value\
+                \ == \"ON\");\n      else if (key == \"Melody Sounds\") id(melodySounds).publish_state(value\
+                \ == \"ON\");\n      else if (key == \"Warning Sounds\") id(warningSounds).publish_state(value\
+                \ == \"ON\");\n      else if (key == \"Bin Full Detect\") id(binFullDetect).publish_state(value\
+                \ == \"ON\");\n      else if (key == \"Filter Change Time (seconds)\"\
+                ) id(filterChangeTime).publish_state(atof(value.c_str()));\n     \
+                \ else if (key == \"Brush Change Time (seconds)\") id(brushChangeTime).publish_state(atof(value.c_str()));\n\
+                \      else if (key == \"Dirt Bin Alert Reminder Interval (minutes)\"\
+                ) id(dirtBinAlertReminder).publish_state(atof(value.c_str()));\n \
+                \   } \n    // ---- Special lines without commas ----\n    else if\
+                \ (line.find(\"Current Dirt Bin Runtime is:\") == 0) {\n      std::string\
+                \ val = line.substr(strlen(\"Current Dirt Bin Runtime is:\"));\n \
+                \     trim(val);\n      id(currentDirtBinRuntime).publish_state(atof(val.c_str()));\n\
+                \    } \n    else if (line.find(\"Number of Cleanings where Dust Bin\
+                \ was Full is:\") == 0) {\n      std::string val = line.substr(strlen(\"\
+                Number of Cleanings where Dust Bin was Full is:\"));\n      trim(val);\n\
+                \      id(numberDustBinFull).publish_state(atof(val.c_str()));\n \
+                \   } \n  }\n} else if (command.find(\"ARCHES Board\") != std::string::npos)\
+                \ id(uiState).publish_state(\"Starting...\");"
+    rx_timeout: 2
+    stop_bits: 1
+    data_bits: 8
+    parity: NONE
+binary_sensor:
+  - platform: template
+    id: usbConnected
+    name: USB Connected
+    entity_category: diagnostic
+    disabled_by_default: false
+  - platform: template
+    id: chargerBatteryOverTemp
+    name: Battery Over Temp
+    entity_category: diagnostic
+    disabled_by_default: false
+  - platform: template
+    id: chargerChargingActive
+    name: Charging Active
+    entity_category: diagnostic
+    disabled_by_default: false
+  - platform: template
+    id: chargerChargingEnabled
+    name: Charging Enabled
+    entity_category: diagnostic
+    disabled_by_default: false
+  - platform: template
+    id: chargerConfidentOnFuel
+    name: Confident On Fuel
+    entity_category: diagnostic
+    disabled_by_default: false
+  - platform: template
+    id: chargerOnReservedFuel
+    name: On Reserved Fuel
+    entity_category: diagnostic
+    disabled_by_default: false
+  - platform: template
+    id: chargerEmptyFuel
+    name: Empty Fuel
+    entity_category: diagnostic
+    disabled_by_default: false
+  - platform: template
+    id: chargerBatteryFailure
+    name: Battery Failure
+    entity_category: diagnostic
+    disabled_by_default: false
+  - platform: template
+    id: chargerExtPwrPresent
+    name: Ext Power Present
+    entity_category: diagnostic
+    disabled_by_default: false
+  - platform: template
+    id: chargerThermistorPresent
+    name: Thermistor Present
+    entity_category: diagnostic
+    disabled_by_default: false
+time:
+  - platform: homeassistant
+    timezone: ${timezone}
+    id: nbs_time
+    on_time:
+      - minutes:
+          - 0
+          - 10
+          - 20
+          - 30
+          - 40
+          - 50
+        seconds:
+          - 0
+        then:
+          - lambda: !lambda |-
+              auto now = id(nbs_time).now();
+              if (!now.is_valid()) return;
+
+              uint8_t flags = id(g_schedule)[0];
+
+              // bit 0 = global enable
+              if (!(flags & 0x01)) {
+                ESP_LOGD("schedule", "Global disabled");
+                return;
+              }
+
+              // day_of_week: Sunday=1 ... Saturday=7
+              uint8_t dow = now.day_of_week;
+
+              // bit for day enable: bit1 = Sunday, bit2 = Monday, ...
+              uint8_t day_bit = 1 << dow;
+              if (!(flags & day_bit)) {
+                ESP_LOGD("schedule", "Day %d disabled", dow);
+                return;
+              }
+
+              // schedule value for today
+              uint8_t value = id(g_schedule)[dow];
+
+              // convert value → hour/min
+              uint8_t target_hour = value / 6;
+              uint8_t target_min  = (value % 6) * 10;
+
+              ESP_LOGD("schedule",
+                "Now %02d:%02d | Target %02d:%02d (value=%d)",
+                now.hour, now.minute,
+                target_hour, target_min,
+                value
+              );
+
+              // check match
+              if (now.hour == target_hour && now.minute == target_min) {
+                ESP_LOGD("schedule", "Schedule matched → DO ACTION");
+                id(houseClean).press();
+              }
+    update_interval: 15min
+text:
+  - platform: template
+    id: scheduleset
+    name: ScheduleSet
+    mode: TEXT
+    set_action:
+      then:
+        - lambda: !lambda |-
+            int i = 0;
+            char *p = strtok((char *)x.c_str(), ",");
+
+            while (p && i < 8) {
+              int v = atoi(p);
+
+              if (i == 0) {          // flags
+                if (v < 0) v = 0;
+                if (v > 255) v = 255;
+              } else {               // day values
+                if (v < 0) v = 0;
+                if (v > 143) v = 143;
+              }
+
+              id(g_schedule)[i++] = (uint8_t)v;
+              p = strtok(nullptr, ",");
+            }
+
+            if (i != 8) {
+              ESP_LOGW("schedule", "Invalid schedule string");
+            }
+
+            char buf[40];
+            snprintf(
+              buf, sizeof(buf),
+              "%u,%u,%u,%u,%u,%u,%u,%u",
+              id(g_schedule)[0],
+              id(g_schedule)[1],
+              id(g_schedule)[2],
+              id(g_schedule)[3],
+              id(g_schedule)[4],
+              id(g_schedule)[5],
+              id(g_schedule)[6],
+              id(g_schedule)[7]
+            );
+
+            id(scheduleset).publish_state(buf);
+    disabled_by_default: false
+    min_length: 0
+    max_length: 255
+    optimistic: false
+    restore_value: false
+    update_interval: 60s
+    initial_value: ''
+  - platform: template
+    id: timezone_text
+    name: Timezone
+    mode: TEXT
+    set_action:
+      then:
+        - lambda: !lambda |-
+            id(timezone_text).publish_state(x.c_str()); // update this text component
+            id(g_timezone) = std::string(x.c_str()); // store tz in global
+            id(nbs_time).set_timezone(x.c_str()); // set timezone for time
+            ESP_LOGI("timezone", "Timezone set to: %s", x.c_str()); // log
+    disabled_by_default: false
+    min_length: 0
+    max_length: 255
+    optimistic: false
+    restore_value: false
+    update_interval: 60s
+    initial_value: ''
+switch:
+  - platform: template
+    name: Test Mode
+    id: testMode
+    turn_on_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              VGVzdE1vZGUgT24gCg==
+        - delay: 500ms
+        - uart.write:
+            data: !!binary |
+              VGVzdE1vZGUgCg==
+    turn_off_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              VGVzdE1vZGUgT2ZmIAo=
+        - delay: 500ms
+        - uart.write:
+            data: !!binary |
+              VGVzdE1vZGUgCg==
+    entity_category: diagnostic
+    disabled_by_default: false
+    restore_mode: ALWAYS_OFF
+    optimistic: false
+    assumed_state: false
+  - platform: template
+    name: Play Extra Sounds
+    optimistic: true
+    id: switch_play_extra_sounds
+    turn_on_action:
+      then:
+        - lambda: !lambda |-
+            id(g_play_extra_sounds) = true;
+    turn_off_action:
+      then:
+        - lambda: !lambda |-
+            id(g_play_extra_sounds) = false;
+    entity_category: diagnostic
+    disabled_by_default: false
+    restore_mode: ALWAYS_OFF
+    assumed_state: false
+  - platform: template
+    name: Click sounds
+    optimistic: true
+    id: clickSounds
+    turn_on_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIEJ1dHRvbkNsaWNrIE9OIAo=
+        - script.execute:
+            id: get_user_settings
+    turn_off_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIEJ1dHRvbkNsaWNrIE9GRiAK
+        - script.execute:
+            id: get_user_settings
+    entity_category: diagnostic
+    disabled_by_default: false
+    restore_mode: ALWAYS_OFF
+    assumed_state: false
+  - platform: template
+    name: LED
+    optimistic: true
+    id: led
+    turn_on_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIFN0ZWFsdGhMRUQgT04gCg==
+        - script.execute:
+            id: get_user_settings
+    turn_off_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIFN0ZWFsdGhMRUQgT0ZGIAo=
+        - script.execute:
+            id: get_user_settings
+    entity_category: diagnostic
+    disabled_by_default: false
+    restore_mode: ALWAYS_OFF
+    assumed_state: false
+  - platform: template
+    name: Wall Enable
+    optimistic: true
+    id: wallEnable
+    turn_on_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIFdhbGxFbmFibGUgT04gCg==
+        - delay: 100ms
+        - uart.write:
+            data: !!binary |
+              R2V0VXNlclNldHRpbmdzIAo=
+    turn_off_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIFdhbGxFbmFibGUgT0ZGIAo=
+        - delay: 100ms
+        - uart.write:
+            data: !!binary |
+              R2V0VXNlclNldHRpbmdzIAo=
+    entity_category: diagnostic
+    disabled_by_default: false
+    restore_mode: ALWAYS_OFF
+    assumed_state: false
+  - platform: template
+    name: Eco Mode
+    optimistic: true
+    id: ecoMode
+    turn_on_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIEVjb01vZGUgT04gCg==
+        - script.execute:
+            id: get_user_settings
+    turn_off_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIEVjb01vZGUgT0ZGIAo=
+        - script.execute:
+            id: get_user_settings
+    entity_category: diagnostic
+    disabled_by_default: false
+    restore_mode: ALWAYS_OFF
+    assumed_state: false
+  - platform: template
+    name: IntenseClean
+    optimistic: true
+    id: intenseClean
+    turn_on_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIEludGVuc2VDbGVhbiBPTiAK
+        - script.execute:
+            id: get_user_settings
+    turn_off_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIEludGVuc2VDbGVhbiBPRkYgCg==
+        - script.execute:
+            id: get_user_settings
+    entity_category: diagnostic
+    disabled_by_default: false
+    restore_mode: ALWAYS_OFF
+    assumed_state: false
+  - platform: template
+    name: WiFi
+    optimistic: true
+    id: wifiOnOff
+    turn_on_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIFdpRmkgT04gCg==
+        - script.execute:
+            id: get_user_settings
+    turn_off_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIFdpRmkgT0ZGIAo=
+        - script.execute:
+            id: get_user_settings
+    entity_category: diagnostic
+    disabled_by_default: false
+    restore_mode: ALWAYS_OFF
+    assumed_state: false
+  - platform: template
+    name: Melody Sounds
+    optimistic: true
+    id: melodySounds
+    turn_on_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIE1lbG9kaWVzIE9OIAo=
+        - script.execute:
+            id: get_user_settings
+    turn_off_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIE1lbG9kaWVzIE9GRiAK
+        - script.execute:
+            id: get_user_settings
+    entity_category: diagnostic
+    disabled_by_default: false
+    restore_mode: ALWAYS_OFF
+    assumed_state: false
+  - platform: template
+    name: Warning Sounds
+    optimistic: true
+    id: warningSounds
+    turn_on_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIFdhcm5pbmdzIE9OIAo=
+        - script.execute:
+            id: get_user_settings
+    turn_off_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIFdhcm5pbmdzIE9GRiAK
+        - script.execute:
+            id: get_user_settings
+    entity_category: diagnostic
+    disabled_by_default: false
+    restore_mode: ALWAYS_OFF
+    assumed_state: false
+  - platform: template
+    name: Bin Full Detect
+    optimistic: true
+    id: binFullDetect
+    turn_on_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIEJpbkZ1bGxEZXRlY3QgT04gCg==
+        - script.execute:
+            id: get_user_settings
+    turn_off_action:
+      then:
+        - uart.write:
+            data: !!binary |
+              U2V0VXNlclNldHRpbmdzIEJpbkZ1bGxEZXRlY3QgT0ZGIAo=
+        - script.execute:
+            id: get_user_settings
+    entity_category: diagnostic
+    disabled_by_default: false
+    restore_mode: ALWAYS_OFF
+    assumed_state: false
+number:
+  - platform: template
+    id: spot_width
+    min_value: 100.0
+    max_value: 400.0
+    step: 1.0
+    unit_of_measurement: cm
+    mode: SLIDER
+    name: Spot Clean Width
+    optimistic: true
+    disabled_by_default: false
+    update_interval: 60s
+    initial_value: 100.0
+  - platform: template
+    id: spot_height
+    min_value: 100.0
+    max_value: 400.0
+    step: 1.0
+    unit_of_measurement: cm
+    mode: SLIDER
+    name: Spot Clean Height
+    optimistic: true
+    disabled_by_default: false
+    update_interval: 60s
+    initial_value: 100.0
+select:
+  - platform: logger
+    name: Logger select
+    disabled_by_default: false
+    entity_category: config
+    icon: mdi:bug
+  - platform: template
+    name: Navigation Mode
+    id: navigationMode
+    optimistic: true
+    options:
+      - Normal
+      - Gentle
+      - Deep
+      - Quick
+    icon: mdi:robot-vacuum
+    on_value:
+      - then:
+          - uart.write:
+              data: !lambda |-
+                std::string cmd = std::string("SetNavigationMode ") + x + "\n";
+                return std::vector<uint8_t>(cmd.begin(), cmd.end());
+    disabled_by_default: false
+    update_interval: 60s
+    initial_option: Normal
+button:
+  - platform: template
+    name: House Clean
+    id: houseClean
+    icon: mdi:home
+    on_press:
+      - then:
+          - script.execute:
+              id: play_extra_sounds
+              soundid: 1
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_START_HOUSE_CLEANING
+    disabled_by_default: false
+  - platform: template
+    name: Spot Clean
+    icon: mdi:target
+    on_press:
+      - then:
+          - script.execute:
+              id: play_extra_sounds
+              soundid: 1
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_START_SPOT_CLEANING
+    disabled_by_default: false
+  - platform: template
+    name: Spot Clean (Height & Width)
+    icon: mdi:target
+    on_press:
+      - then:
+          - uart.write:
+              data: !lambda |-
+                // Convert numbers to integers
+                int w = (int) id(spot_width).state;
+                int h = (int) id(spot_height).state;
+
+                std::string cmd = "Clean Spot Width " + std::to_string(w) + " Height " + std::to_string(h) + "\n";
+                id(play_extra_sounds)->execute(1);
+                return std::vector<uint8_t>(cmd.begin(), cmd.end());
+    disabled_by_default: false
+  - platform: template
+    name: Stop Cleaning
+    icon: mdi:stop
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_STOP_CLEANING
+    disabled_by_default: false
+  - platform: template
+    name: Pause Cleaning
+    icon: mdi:pause
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_PAUSE_CLEANING
+    disabled_by_default: false
+  - platform: template
+    name: Send to base
+    icon: mdi:home
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_SEND_TO_BASE
+    disabled_by_default: false
+  - platform: template
+    name: Resume Cleaning
+    icon: mdi:play
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_RESUME_CLEANING
+    disabled_by_default: false
+  - platform: template
+    name: Locate Robot
+    icon: mdi:volume-high
+    on_press:
+      - then:
+          - uart.write:
+              data: !!binary |
+                UGxheVNvdW5kIFNvdW5kSWQgMjAgCg==
+    disabled_by_default: false
+  - platform: template
+    name: Manual Drive Forward Up
+    icon: mdi:arrow-up
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_DRIVE_MANUAL_FORWARD_UP
+    disabled_by_default: false
+  - platform: template
+    name: Manual Drive Backwards Up
+    icon: mdi:arrow-down
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_DRIVE_MANUAL_BACKWARDS_UP
+    disabled_by_default: false
+  - platform: template
+    name: Manual Drive Turn Left Up
+    icon: mdi:arrow-left
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_DRIVE_MANUAL_TURN_LEFT_UP
+    disabled_by_default: false
+  - platform: template
+    name: Manual Drive Turn Right Up
+    icon: mdi:arrow-right
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_DRIVE_MANUAL_TURN_RIGHT_UP
+    disabled_by_default: false
+  - platform: template
+    name: Manual Drive Arc Left Up
+    icon: mdi:rotate-left
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_DRIVE_MANUAL_ARC_LEFT_UP
+    disabled_by_default: false
+  - platform: template
+    name: Manual Drive Arc Right Up
+    icon: mdi:rotate-right
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_DRIVE_MANUAL_ARC_RIGHT_UP
+    disabled_by_default: false
+  - platform: template
+    name: Manual Drive Forward Down
+    icon: mdi:arrow-up-bold
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_DRIVE_MANUAL_FORWARD_DOWN
+    disabled_by_default: false
+  - platform: template
+    name: Manual Drive Backwards Down
+    icon: mdi:arrow-down-bold
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_DRIVE_MANUAL_BACKWARDS_DOWN
+    disabled_by_default: false
+  - platform: template
+    name: Manual Drive Turn Left Down
+    icon: mdi:arrow-left-bold
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_DRIVE_MANUAL_TURN_LEFT_DOWN
+    disabled_by_default: false
+  - platform: template
+    name: Manual Drive Turn Right Down
+    icon: mdi:arrow-right-bold
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_DRIVE_MANUAL_TURN_RIGHT_DOWN
+    disabled_by_default: false
+  - platform: template
+    name: Manual Drive Arc Left Down
+    icon: mdi:rotate-left
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_DRIVE_MANUAL_ARC_LEFT_DOWN
+    disabled_by_default: false
+  - platform: template
+    name: Manual Drive Arc Right Down
+    icon: mdi:rotate-right
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_DRIVE_MANUAL_ARC_RIGHT_DOWN
+    disabled_by_default: false
+  - platform: template
+    name: Manual Drive Button Timeout
+    icon: mdi:timer-off
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_DRIVE_MANUAL_BTN_TIMEOUT
+    disabled_by_default: false
+  - platform: template
+    name: Start Manual Cleaning
+    icon: mdi:play-circle
+    on_press:
+      - then:
+          - script.execute:
+              id: send_event
+              event: UIMGR_EVENT_SMARTAPP_START_MANUAL_CLEANING
+    disabled_by_default: false
+  - platform: template
+    name: Update status
+    icon: mdi:refresh
+    on_press:
+      - then:
+          - script.execute:
+              id: get_all_data
+    entity_category: diagnostic
+    disabled_by_default: false
+  - platform: template
+    name: Clear All Alerts & Errors
+    icon: mdi:notification-clear-all
+    on_press:
+      - then:
+          - uart.write:
+              data: !!binary |
+                U2V0VUlFcnJvciBjbGVhcmFsbCAK
+    entity_category: diagnostic
+    disabled_by_default: false
+  - platform: template
+    name: Shutdown
+    icon: mdi:power
+    on_press:
+      - then:
+          - script.execute:
+              id: robotShutdown
+    entity_category: diagnostic
+    disabled_by_default: false
+  - platform: template
+    name: PowerCycle
+    icon: mdi:restart
+    on_press:
+      - then:
+          - script.execute:
+              id: powercycle
+    entity_category: diagnostic
+    disabled_by_default: false
+  - platform: restart
+    name: Reboot ESP
+    disabled_by_default: false
+    icon: mdi:restart
+    entity_category: config
+    device_class: restart
+
+[32mINFO Configuration is valid![0m
+[0m
